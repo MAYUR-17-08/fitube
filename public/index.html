@@ -2,60 +2,234 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Fitube Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="manifest" href="/manifest.json">
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; }
-        .header { padding: 20px; font-size: 24px; font-weight: bold; }
-        .search-box { padding: 0 20px; }
-        input { width: 100%; padding: 15px; border-radius: 25px; border: none; background: #222; color: #fff; }
-        .results { padding: 20px; }
-        .song-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #222; cursor: pointer; }
-        .song-item img { width: 50px; border-radius: 5px; margin-right: 15px; }
-        .player { position: fixed; bottom: 0; width: 100%; background: #111; padding: 15px; display: flex; align-items: center; justify-content: space-between; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: #000; color: #fff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Top Header */
+        .top-nav { padding: 18px 20px 10px; display: flex; justify-content: space-between; align-items: center; }
+        .top-nav h1 { font-size: 22px; font-weight: 800; }
+
+        /* Search Bar */
+        .search-area { padding: 8px 20px 14px; }
+        .search-bar { background: #181818; border-radius: 12px; display: flex; align-items: center; padding: 12px 14px; gap: 10px; border: 1px solid #282828; }
+        .search-bar input { background: transparent; border: none; outline: none; color: #fff; width: 100%; font-size: 15px; }
+
+        /* Main Scroll View */
+        .container { flex: 1; overflow-y: auto; padding: 10px 20px 140px; }
+        .section-title { font-size: 17px; font-weight: 700; margin: 16px 0 12px; color: #eee; }
+
+        /* Song Card */
+        .song-row { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; background: #0d0d0d; margin-bottom: 8px; cursor: pointer; }
+        .song-row:active { background: #1f1f1f; }
+        .song-row img { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; }
+        .song-details { flex: 1; min-width: 0; }
+        .song-details .title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .song-details .artist { font-size: 12px; color: #888; margin-top: 2px; }
+
+        /* Horizontal Carousel (Recently Played) */
+        .h-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; }
+        .h-card { min-width: 120px; max-width: 120px; cursor: pointer; }
+        .h-card img { width: 120px; height: 120px; border-radius: 10px; object-fit: cover; }
+        .h-card .title { font-size: 13px; font-weight: 600; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Floating Bottom Player */
+        .player-bar { position: fixed; bottom: 65px; left: 10px; right: 10px; background: #1c1c1e; border-radius: 14px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 100; }
+        .player-bar.hidden { display: none; }
+        .player-bar img { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; }
+        .player-text { flex: 1; min-width: 0; }
+        .player-text .p-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .player-text .p-artist { font-size: 11px; color: #888; }
+        .player-btns { display: flex; align-items: center; gap: 8px; }
+        .player-btns button { background: transparent; border: none; color: #fff; font-size: 18px; cursor: pointer; padding: 4px; }
+
+        /* Bottom Tabs */
+        .bottom-tabs { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #0a0a0a; border-top: 1px solid #1a1a1a; display: flex; justify-content: space-around; align-items: center; z-index: 90; }
+        .tab-btn { background: transparent; border: none; color: #777; font-size: 11px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+        .tab-btn.active { color: #3b82f6; }
+        .tab-btn span { font-size: 18px; }
     </style>
 </head>
 <body>
-    <div class="header">Fitube</div>
-    <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search songs...">
+
+    <div class="top-nav">
+        <h1 id="tabHeaderTitle">Fitube Home</h1>
     </div>
-    <div class="results" id="results"></div>
-    <div class="player" id="player" style="display:none;">
-        <span id="playingTitle">Playing...</span>
-        <button onclick="togglePlay()" id="playBtn">Pause</button>
+
+    <div class="search-area" id="searchArea">
+        <div class="search-bar">
+            <span>🔍</span>
+            <input type="text" id="searchInput" placeholder="Search tracks, artists...">
+        </div>
     </div>
-    <audio id="audio"></audio>
+
+    <div class="container" id="mainContainer">
+        <!-- Recently Played Section -->
+        <div id="recentSection" style="display:none;">
+            <div class="section-title">Recently Played</div>
+            <div class="h-scroll" id="recentList"></div>
+        </div>
+
+        <!-- Dynamic Content List -->
+        <div class="section-title" id="listTitle">Popular Releases</div>
+        <div id="contentList"></div>
+    </div>
+
+    <!-- Mini Player -->
+    <div class="player-bar hidden" id="playerBar">
+        <img id="pThumb" src="" alt="">
+        <div class="player-text">
+            <div class="p-title" id="pTitle">-</div>
+            <div class="p-artist" id="pArtist">-</div>
+        </div>
+        <div class="player-btns">
+            <button onclick="togglePlay()" id="playBtn">⏸</button>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-tabs">
+        <button class="tab-btn active" onclick="switchTab('home')"><span>🏠</span>Home</button>
+        <button class="tab-btn" onclick="switchTab('search')"><span>🔍</span>Search</button>
+        <button class="tab-btn" onclick="switchTab('playlist')"><span>❤️</span>Favourites</button>
+    </div>
+
+    <audio id="audioElement" preload="auto"></audio>
 
     <script>
-        const input = document.getElementById('searchInput');
-        const results = document.getElementById('results');
-        const audio = document.getElementById('audio');
-        const player = document.getElementById('player');
-        const playingTitle = document.getElementById('playingTitle');
+        const audio = document.getElementById('audioElement');
+        const searchInput = document.getElementById('searchInput');
+        const contentList = document.getElementById('contentList');
+        const recentSection = document.getElementById('recentSection');
+        const recentList = document.getElementById('recentList');
+        const playerBar = document.getElementById('playerBar');
+        const pThumb = document.getElementById('pThumb');
+        const pTitle = document.getElementById('pTitle');
+        const pArtist = document.getElementById('pArtist');
+        const playBtn = document.getElementById('playBtn');
 
-        input.addEventListener('keypress', async (e) => {
-            if (e.key === 'Enter') {
-                const res = await fetch(`/api/search?q=${input.value}`);
-                const data = await res.json();
-                results.innerHTML = data.map(s => `
-                    <div class="song-item" onclick="play('${s.id}', '${s.title.replace(/'/g, "")}')">
-                        <img src="${s.thumbnail}">
-                        <div>${s.title}</div>
-                    </div>
-                `).join('');
-            }
+        let currentSong = null;
+        let currentTab = 'home';
+
+        // Load Initial Feed
+        document.addEventListener('DOMContentLoaded', () => {
+            renderRecent();
+            loadDefaultSongs('Trending Hindi Hits');
         });
 
-        function play(id, title) {
+        // Search trigger
+        let debounceTimer;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            const q = searchInput.value.trim();
+            if (q.length < 2) return;
+            debounceTimer = setTimeout(() => fetchSongs(q), 350);
+        });
+
+        async function fetchSongs(query) {
+            contentList.innerHTML = '<p style="color:#777;text-align:center;margin-top:40px;">Fetching audio streams...</p>';
+            try {
+                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const songs = await res.json();
+                renderList(songs);
+            } catch(e) {
+                contentList.innerHTML = '<p style="color:#ef4444;text-align:center;margin-top:40px;">Network issue. Try again.</p>';
+            }
+        }
+
+        async function loadDefaultSongs(query) {
+            const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+            const songs = await res.json();
+            renderList(songs);
+        }
+
+        function renderList(songs) {
+            if (!songs || songs.length === 0) {
+                contentList.innerHTML = '<p style="color:#666;text-align:center;margin-top:40px;">No tracks found.</p>';
+                return;
+            }
+            contentList.innerHTML = songs.map(s => `
+                <div class="song-row" onclick="playAudio('${s.id}', '${escape(s.title)}', '${escape(s.artist)}', '${s.thumbnail}')">
+                    <img src="${s.thumbnail}">
+                    <div class="song-details">
+                        <div class="title">${s.title}</div>
+                        <div class="artist">${s.artist}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function playAudio(id, title, artist, thumb) {
+            title = unescape(title);
+            artist = unescape(artist);
+
+            currentSong = { id, title, artist, thumbnail: thumb };
+            saveRecent(currentSong);
+
+            pThumb.src = thumb;
+            pTitle.innerText = title;
+            pArtist.innerText = artist;
+            playerBar.classList.remove('hidden');
+
             audio.src = `/api/stream/${id}`;
-            audio.play();
-            player.style.display = 'flex';
-            playingTitle.innerText = title;
+            audio.play().catch(e => console.log('Auto-play blocked:', e));
+            playBtn.innerText = '⏸';
         }
 
         function togglePlay() {
-            audio.paused ? audio.play() : audio.pause();
+            if (audio.paused) {
+                audio.play();
+                playBtn.innerText = '⏸';
+            } else {
+                audio.pause();
+                playBtn.innerText = '▶';
+            }
+        }
+
+        // LocalStorage Playlist & Recents
+        function saveRecent(song) {
+            let recents = JSON.parse(localStorage.getItem('fitube_recent') || '[]');
+            recents = recents.filter(s => s.id !== song.id);
+            recents.unshift(song);
+            if (recents.length > 15) recents.pop();
+            localStorage.setItem('fitube_recent', JSON.stringify(recents));
+            renderRecent();
+        }
+
+        function renderRecent() {
+            const recents = JSON.parse(localStorage.getItem('fitube_recent') || '[]');
+            if (recents.length === 0) {
+                recentSection.style.display = 'none';
+                return;
+            }
+            recentSection.style.display = 'block';
+            recentList.innerHTML = recents.map(s => `
+                <div class="h-card" onclick="playAudio('${s.id}', '${escape(s.title)}', '${escape(s.artist)}', '${s.thumbnail}')">
+                    <img src="${s.thumbnail}">
+                    <div class="title">${s.title}</div>
+                </div>
+            `).join('');
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (tab === 'home') {
+                document.getElementById('tabHeaderTitle').innerText = 'Fitube Home';
+                document.getElementById('listTitle').innerText = 'Popular Hits';
+                loadDefaultSongs('Arijit Singh Hits');
+            } else if (tab === 'search') {
+                document.getElementById('tabHeaderTitle').innerText = 'Search';
+                searchInput.focus();
+            } else if (tab === 'playlist') {
+                document.getElementById('tabHeaderTitle').innerText = 'My Favourites';
+                document.getElementById('listTitle').innerText = 'Saved Tracks';
+                const recents = JSON.parse(localStorage.getItem('fitube_recent') || '[]');
+                renderList(recents);
+            }
         }
     </script>
 </body>
